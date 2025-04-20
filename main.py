@@ -447,56 +447,145 @@ https://github.com/open-webui/open-webui
 )
 # === Setup ===
 # Dynamically load BASE_DIR from base_dir.txt
-# This will have the path to data files like 
-#    conversations, peronality, people etc..
-# I use 2 differnt computers when working on this, but my path
-# path is alway wrong.
-# get the directory where *this file* lives
+# This allows flexible file paths across multiple systems
+# Files include: personality, conversation log, memory db, etc.
+
+import os
+import sqlite3
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-# now read base_dir.txt from that same folder
+
+# Load base directory path
 try:
     with open(os.path.join(SCRIPT_DIR, "base_dir.txt"), "r", encoding="utf-8") as f:
         BASE_DIR = f.read().strip()
 except Exception as e:
     raise RuntimeError(f"❌ Could not load base_dir.txt: {e}")
 
+# Static personality file remains outside the DB
 PERSONALITY_FILE = os.path.join(BASE_DIR, "personality_amicia.txt")
-CONVERSATION_FILE = os.path.join(BASE_DIR, "conversation.json")
-PEOPLE_FILE = os.path.join(BASE_DIR, "people.json")
-MARY_MEMORY_FILE = os.path.join(BASE_DIR, "mary_memory.json")
-USER_MEMORY_FILE = os.path.join(BASE_DIR, "user_memory.json")
-
-try:
-    with open(USER_MEMORY_FILE, "r", encoding="utf-8") as f:
-        user_memory = json.load(f)
-        print("👥 user_memory.json loaded successfully!")        
-except:
-    user_memory = {"likes": {}, "dislikes": {}}
+with open(PERSONALITY_FILE, "r", encoding="utf-8") as f:
+    personality = f.read().strip()
 
 
-try:
-    with open(MARY_MEMORY_FILE, "r", encoding="utf-8") as f:
-        mary_memory = json.load(f)
-        print("👥 mary_memory.json loaded successfully!")        
-except:
-    mary_memory = {"likes": {}, "dislikes": {}}
+# Connect to SQLite memory DB
+DB_PATH = os.path.join(BASE_DIR, "ai_memory.db")
+conn = sqlite3.connect(DB_PATH)
+cursor = conn.cursor()
 
-try:
-    with open(PEOPLE_FILE, "r", encoding="utf-8") as f:
-        people = json.load(f)
-        print("👥 people.json loaded successfully!")
-except Exception as e:
-    people = {}
-    print(f"⚠️ Could not load people.json: {e}")
+# Create required tables if they don't exist
+cursor.executescript("""
+CREATE TABLE IF NOT EXISTS user_memory (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category TEXT,
+    type TEXT,            -- e.g. 'like', 'dislike'
+    value TEXT UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS people (
+    name TEXT PRIMARY KEY,
+    info TEXT
+);
+
+CREATE TABLE IF NOT EXISTS convo_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user TEXT,
+    ai TEXT,
+    timestamp TEXT
+);
+
+CREATE TABLE IF NOT EXISTS ai_memory (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT,       -- 'like' or 'dislike'
+    value TEXT       -- the actual item (e.g., "card magic")
+);
+
+
+CREATE TABLE IF NOT EXISTS last_seen (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    timestamp TEXT
+);
+""")
+
+conn.commit()
+
+def remember_user_like(item: str):
+    cursor.execute("INSERT OR IGNORE INTO user_memory (category, type, value) VALUES (?, ?, ?)", ("general", "like", item.strip()))
+    conn.commit()
+
+def remember_user_dislike(item: str):
+    cursor.execute("INSERT OR IGNORE INTO user_memory (category, type, value) VALUES (?, ?, ?)", ("general", "dislike", item.strip()))
+    conn.commit()
+
+def get_user_memory_summary():
+    try:
+        cursor.execute("SELECT type, value FROM user_memory")
+        rows = cursor.fetchall()
+
+        likes = [val for typ, val in rows if typ == "like"][:2]
+        dislikes = [val for typ, val in rows if typ == "dislike"][:2]
+
+        summary = []
+        if likes:
+            summary.append(f"She knows the user enjoys things like {', '.join(likes)}.")
+        if dislikes:
+            summary.append(f"She also remembers the user prefers to avoid topics like {', '.join(dislikes)}.")
+        return " ".join(summary)
+    except Exception as e:
+        print(f"⚠️ DB read error in get_user_memory_summary: {e}")
+        return ""
+
+def remember_ai_like(item: str):
+    cursor.execute("INSERT OR IGNORE INTO ai_memory (type, value) VALUES (?, ?)", ("like", item.strip()))
+    conn.commit()
+
+def remember_ai_dislike(item: str):
+    cursor.execute("INSERT OR IGNORE INTO ai_memory (type, value) VALUES (?, ?)", ("dislike", item.strip()))
+    conn.commit()
+
     
     
-try:
-    with open(PERSONALITY_FILE, "r", encoding="utf-8") as f:        
-        personality = f.read()
-        print(f"️\nperonality.txt Read SUCCESSFULLY!\n")
-except Exception as e:
-    personality = "You are Richards girlfriend."
-    print(f"⚠️ Could not load personality.txt: {e}")
+def get_ai_memory_summary():
+    try:
+        cursor.execute("SELECT type, value FROM ai_memory")
+        rows = cursor.fetchall()
+        likes = [val for typ, val in rows if typ == "like"][:2]
+        dislikes = [val for typ, val in rows if typ == "dislike"][:2]
+
+        summary = []
+        if likes:
+            summary.append(f"Amicia enjoys things like {', '.join(likes)}.")
+        if dislikes:
+            summary.append(f"She dislikes topics like {', '.join(dislikes)}.")
+        return " ".join(summary)
+    except Exception as e:
+        print(f"⚠️ DB error in get_ai_memory_summary: {e}")
+        return ""
+
+
+
+def remember_person(name: str, description: str):
+    try:
+        cursor.execute("INSERT OR REPLACE INTO people (name, info) VALUES (?, ?)", (name.strip(), description.strip()))
+        conn.commit()
+    except Exception as e:
+        print(f"⚠️ DB error in remember_person: {e}")
+
+def get_known_people_summary():
+    try:
+        cursor.execute("SELECT name, info FROM people")
+        rows = cursor.fetchall()
+        if not rows:
+            return ""
+        entries = [f"{name}: {info}" for name, info in rows]
+        return "People she remembers:\n" + "\n".join(entries)
+    except Exception as e:
+        print(f"⚠️ DB error in get_known_people_summary: {e}")
+        return ""
+
+
+
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -960,15 +1049,23 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 def update_timestamp():
     now = datetime.now(pytz.timezone("America/Chicago")).strftime("%Y-%m-%d %H:%M:%S")
-    with open("timestamp.txt", "w") as f:
-        f.write(now)
+    cursor.execute("INSERT OR REPLACE INTO last_seen (id, timestamp) VALUES (1, ?)", (now,))
+    conn.commit()
+
         
 def get_time_since_last_visit(threshold_hours=3):
     try:
-        with open("timestamp.txt", "r") as f:
-            last = f.read().strip()
-        last_seen = datetime.strptime(last, "%Y-%m-%d %H:%M:%S")
-        now = datetime.now(pytz.timezone("America/Chicago"))
+        cursor.execute("SELECT timestamp FROM last_seen WHERE id = 1")
+        row = cursor.fetchone()
+        if not row:
+            return ""
+
+        # Parse as naive and localize it to the correct timezone
+        tz = pytz.timezone("America/Chicago")
+        last_seen = tz.localize(datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S"))
+
+        # Now get current time with the same timezone
+        now = datetime.now(tz)
         diff = now - last_seen
 
         minutes = int(diff.total_seconds() // 60)
@@ -980,9 +1077,12 @@ def get_time_since_last_visit(threshold_hours=3):
             else:
                 return f"It’s been {hours} hour(s) and {minutes % 60} minutes since your last visit."
         else:
-            return ""  # Don't inject anything unless threshold exceeded
-    except:
+            return ""
+
+    except Exception as e:
+        print(f"⚠️ Error reading last_seen: {e}")
         return ""
+
 
         
 
@@ -990,31 +1090,16 @@ def get_today_date():
     now = datetime.now(pytz.timezone("America/Chicago"))  # Change timezone if needed
     return now.strftime("Today is %A, %B %d, %Y. The time is %I:%M %p.")
 
-def log_conversation(user_msg: str, ai_msg: str):
-    print(f"📝 Logging: user='{user_msg[:30]}', ai='{ai_msg[:30]}'")
-
-    entry = {
-        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "user": trim(user_msg.strip(), 500),
-        "ai": trim(ai_msg.strip(), 500),
-    }
-
-    data = []
-    if os.path.exists(CONVERSATION_FILE):
-        try:
-            with open(CONVERSATION_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-        except Exception as e:
-            print(f"⚠️ Could not read conversation.json: {e}")
-
-    data.append(entry)
-
+def log_conversation(user_input: str, ai_output: str):
     try:
-        with open(CONVERSATION_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-            print("✅ conversation.json updated!")
+        cursor.execute(
+            "INSERT INTO convo_log (user, ai, timestamp) VALUES (?, ?, ?)",
+            (user_input.strip(), ai_output.strip(), datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        )
+        conn.commit()
     except Exception as e:
-        print(f"⚠️ Could not write to conversation.json: {e}")
+        print(f"⚠️ Failed to log conversation: {e}")
+
 
 def trim(text: str, limit: int = 250) -> str:
     return text if len(text) <= limit else text[:limit].rstrip() + "..."
@@ -1022,125 +1107,19 @@ def trim(text: str, limit: int = 250) -> str:
 def get_recent_convo_for_prompt(count=5):
     entries = pull_conversation(count)
     lines = []
-    for e in entries:
-        user = trim(e.get("user", "").replace('"', "'").replace("\r", "").replace("\t", "    "), 250)
-        ai = trim(e.get("ai", "").replace('"', "'").replace("\r", "").replace("\t", "    "), 250)
+    for user, ai in entries:
+        lines.append(f"User: {user}")
+        lines.append(f"AI: {ai}")
+    return "\n".join(lines)
 
-        # optional: cut "Mary Redshire:" from memory
-        if ai.lower().startswith("mary redshire:"):
-            ai = ai[len("mary redshire:"):].lstrip(" :\n*-")
 
-        lines.append(f"User: {user}\nAI: {ai}")
-    return "\n\n".join(lines)
-
-def pull_conversation(count: int = 5):
-    if not os.path.exists(CONVERSATION_FILE):
+def pull_conversation(count=20):
+    try:
+        cursor.execute("SELECT user, ai FROM convo_log ORDER BY id DESC LIMIT ?", (count,))
+        return cursor.fetchall()[::-1]  # reverse to maintain original order
+    except Exception as e:
+        print(f"⚠️ Error pulling conversation: {e}")
         return []
-
-    try:
-        with open(CONVERSATION_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return data[-count:]  # return last X entries
-    except Exception as e:
-        print(f"⚠️ Failed to load conversation history: {e}")
-        return []
-        
-def remember_person(name: str, info: dict):
-    people[name] = info
-    try:
-        with open(PEOPLE_FILE, "w", encoding="utf-8") as f:
-            json.dump(people, f, indent=2)
-            print(f"✅ Remembered {name}")
-    except Exception as e:
-        print(f"⚠️ Could not update people.json: {e}")
-        
-def remember_like(category: str, item: str):
-    global mary_memory
-    if category not in mary_memory["likes"]:
-        mary_memory["likes"][category] = []
-    if item not in mary_memory["likes"][category]:
-        mary_memory["likes"][category].append(item)
-
-    try:
-        with open(MARY_MEMORY_FILE, "w", encoding="utf-8") as f:
-            json.dump(mary_memory, f, indent=2)
-            print(f"✅ Logged Mary's like → {category}: {item}")
-    except Exception as e:
-        print(f"⚠️ Error saving Mary's like: {e}")
-
-
-def get_user_memory_summary():
-    if not os.path.exists("user_memory.json"):
-        return ""
-
-    try:
-        with open("user_memory.json", "r", encoding="utf-8") as f:
-            memory = json.load(f)
-
-        likes = memory.get("likes", [])[:2]  # only 2 max
-        dislikes = memory.get("dislikes", [])[:2]
-
-        summary = []
-
-        if likes:
-            like_str = ", ".join(likes)
-            summary.append(f"She knows the user enjoys things like {like_str}.")
-        
-        if dislikes:
-            dislike_str = ", ".join(dislikes)
-            summary.append(f"She also remembers the user prefers to avoid topics like {dislike_str}.")
-
-        return " ".join(summary)
-
-    except Exception as e:
-        print(f"⚠️ Error reading user memory: {e}")
-        return ""
-        
-        
-
-def remember_dislike(category: str, item: str):
-    global mary_memory
-    if category not in mary_memory["dislikes"]:
-        mary_memory["dislikes"][category] = []
-    if item not in mary_memory["dislikes"][category]:
-        mary_memory["dislikes"][category].append(item)
-
-    try:
-        with open(MARY_MEMORY_FILE, "w", encoding="utf-8") as f:
-            json.dump(mary_memory, f, indent=2)
-            print(f"✅ Logged Mary's dislike → {category}: {item}")
-    except Exception as e:
-        print(f"⚠️ Error saving Mary's dislike: {e}")
-        
-def remember_user_like(category: str, item: str):
-    global user_memory
-    if category not in user_memory["likes"]:
-        user_memory["likes"][category] = []
-    if item not in user_memory["likes"][category]:
-        user_memory["likes"][category].append(item)
-
-    try:
-        with open(USER_MEMORY_FILE, "w", encoding="utf-8") as f:
-            json.dump(user_memory, f, indent=2)
-            print(f"✅ Logged your like → {category}: {item}")
-    except Exception as e:
-        print(f"⚠️ Error saving your like: {e}")
-
-
-def remember_user_dislike(category: str, item: str):
-    global user_memory
-    if category not in user_memory["dislikes"]:
-        user_memory["dislikes"][category] = []
-    if item not in user_memory["dislikes"][category]:
-        user_memory["dislikes"][category].append(item)
-
-    try:
-        with open(USER_MEMORY_FILE, "w", encoding="utf-8") as f:
-            json.dump(user_memory, f, indent=2)
-            print(f"✅ Logged your dislike → {category}: {item}")
-    except Exception as e:
-        print(f"⚠️ Error saving your dislike: {e}")
-        
 
 
 import wikipedia
@@ -1466,21 +1445,52 @@ async def chat_completion(
         #from memory import remember_user_like, remember_user_dislike
 
         lower_input = user_input.lower()
+        lower_input = user_input.lower().replace("’", "'")
+
         if "i like" in lower_input:
             item = user_input.split("i like", 1)[-1].strip().rstrip(".")
             print(f"💾 Saving like: {item}")
-            remember_user_like("likes", item)
+            remember_user_like(item)  # ✅ FIXED
+
 
         elif "i don't like" in lower_input or "i do not like" in lower_input:
-            item = user_input.split("i don't like", 1)[-1].strip().rstrip(".")
-            print(f"💾 Saving dislike: {item}")
-            remember_user_dislike("dislikes", item)
+            if "i don't like" in lower_input:
+                item = user_input.split("i don't like", 1)[-1].strip().rstrip(".")
+            elif "i do not like" in lower_input:
+                item = user_input.split("i do not like", 1)[-1].strip().rstrip(".")
+            else:
+                item = None
+
+            if item:
+                print(f"💾 Saving user dislike: {item}")
+                remember_user_dislike(item)
             
         # === Amicia Learning Logic ===
         if "remember" in lower_input and "person" in lower_input:
-            name = user_input.split("remember", 1)[-1].strip()
-            print(f"🧠 Learning person: {name}")
-            remember_person(name)
+            # Format: "Remember person Loki — he's my cat."
+            item = user_input.split("remember", 1)[-1].strip()
+
+            if "—" in item:
+                name, description = [s.strip() for s in item.split("—", 1)]
+            elif "-" in item:
+                name, description = [s.strip() for s in item.split("-", 1)]
+            else:
+                name, description = item.strip(), "No description provided"
+
+            print(f"🧠 Saving person: {name} → {description}")
+            remember_person(name, description)
+
+        elif "remember" in lower_input and " is " in lower_input:
+            try:
+                # Format: "Remember Loki is my cat"
+                parts = user_input.split("remember", 1)[-1].strip().split(" is ", 1)
+                name = parts[0].strip().title()
+                desc = parts[1].strip().rstrip(".")
+                print(f"🧠 Learning person: {name} → {desc}")
+                remember_person(name, desc)
+            except Exception as e:
+                print(f"⚠️ Failed to parse implicit person memory: {e}")
+
 
         elif "remember" in lower_input and "event" in lower_input:
             event = user_input.split("remember", 1)[-1].strip()
@@ -1491,6 +1501,26 @@ async def chat_completion(
             name = user_input.split("forget", 1)[-1].strip()
             print(f"🧽 Forgetting person: {name}")
             forget_person(name)
+            
+        elif "you like" in lower_input or "you enjoy" in lower_input:
+            if "like" in lower_input:
+                item = user_input.split("like", 1)[-1].strip().rstrip(".")
+                print(f"💾 Saving AI like: {item}")
+                remember_ai_like(item)
+
+        elif "you don't like" in lower_input or "you dislike" in lower_input:
+            if "dislike" in lower_input:
+                item = user_input.split("dislike", 1)[-1].strip().rstrip(".")
+            elif "don't like" in lower_input:
+                item = user_input.split("don't like", 1)[-1].strip().rstrip(".")
+            else:
+                item = None
+
+            if item:
+                print(f"💾 Saving AI dislike: {item}")
+                remember_ai_dislike(item)
+
+
             
             
         if "research" in user_input.lower() or "search" in user_input.lower():
