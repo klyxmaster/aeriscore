@@ -4,6 +4,9 @@ Enhanced main.py for Open WebUI
 Author: Richard Scorpio (klyxmaster)
 GitHub: https://github.com/klyxmaster/main4openwebui
 
+Based on: Open WebUI - https://github.com/open-webui/open-webui
+Original Author: Timothy Jaeryang Baek
+
 Features:
 - Persistent memory for likes, dislikes, people, and events
 - Natural language trigger detection
@@ -15,6 +18,7 @@ please visit the repository above.
 
 Last updated: 2025-04-20
 """
+
 ##############################################################################
 import asyncio
 import inspect
