@@ -1,31 +1,20 @@
 ##############################################################################
-# PROJECT: OPEN WEBUI/OLLAMA/MODEL TO HAVE PERSISTENT MEMORY LONG TERM.
-# FILENAME: MAIN.PY
-# DESC: Part of open_webui custom persistent memory
-# UPDATED: 250418 11:30
-# 	HAS CUSTOM PERSONALITY, 
-#   LOGS CONVO'S, READ BACK LAST 5(changeable)
-#   UPDATES PEOPLE AND BASIC INFO (TODO EXPAND ON DETAIL ABOUT PEOPLE)
-#   LOGS LIKES/DISLIKES OF USER AND AI (MARY)
-# TODO: 
-#	REMEMBER EVENTS AND OTHER IMPORTANT INFO
-#   REMOVED DATA DUMP FROM BELOW:
-#       ...\open_webui\retrieval\uitls.py line:88
-#	TODO:
-#	SQLLITE3 MODEL FOR LONGER TERM MEMORY.
-# Tutorial: https://buildingyourownai.blogspot.com/
-# -------------------------------------------------------------------------
-#	
-#	Summary: GitHub Default vs Mine Version
-#	Feature	Default 	GitHub Version		Mine Custom Version
-#   -----------------+--------------------+--------------------------------
-#	Chat history		Persistent			Persistent
-#	User preferences	Not stored			Likes/dislikes logged
-#	People memory		Not stored			Structured via JSON
-#	Personality			Minimal 			Injects memory + people + context
-#	Trigger detection	Manual only			Regex-based auto-detection
-#	Database storage	SQLite/Postgres		DB + JSON files
-#	Memory duration		∞ until	deleted		∞ until deleted
+"""
+Enhanced main.py for Open WebUI
+Author: Richard Scorpio (klyxmaster)
+GitHub: https://github.com/klyxmaster/main4openwebui
+
+Features:
+- Persistent memory for likes, dislikes, people, and events
+- Natural language trigger detection
+- Time-aware responses and delayed session handling
+- Dynamic system prompt injection (memory + context)
+
+This version is maintained via GitHub. For the latest updates, improvements, or to contribute,
+please visit the repository above.
+
+Last updated: 2025-04-20
+"""
 ##############################################################################
 import asyncio
 import inspect
