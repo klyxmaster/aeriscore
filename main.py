@@ -432,17 +432,22 @@ class SPAStaticFiles(StaticFiles):
 
 print(
     rf"""
- ██████╗ ██████╗ ███████╗███╗   ██╗    ██╗    ██╗███████╗██████╗ ██╗   ██╗██╗
-██╔═══██╗██╔══██╗██╔════╝████╗  ██║    ██║    ██║██╔════╝██╔══██╗██║   ██║██║
-██║   ██║██████╔╝█████╗  ██╔██╗ ██║    ██║ █╗ ██║█████╗  ██████╔╝██║   ██║██║
-██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║    ██║███╗██║██╔══╝  ██╔══██╗██║   ██║██║
-╚██████╔╝██║     ███████╗██║ ╚████║    ╚███╔███╔╝███████╗██████╔╝╚██████╔╝██║
- ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝     ╚══╝╚══╝ ╚══════╝╚═════╝  ╚═════╝ ╚═╝
+  ___ ______  ___ _______ ___ ___ ___ _______ ___ ___        _______ _______    
+ |   |   _  \|   |   _   |   Y   |   |       |   Y   |______|       |   _   |   
+ |.  |.  |   |.  |.  |   |.  |   |.  |.|   | |   1   |______|___|   |   1___|   
+ |.  |.  |   |.  |.  |   |.  |   |.  `-|.  |-'\_   _/        /  ___/|____   |   
+ |:  |:  |   |:  |:  1   |:  1   |:  | |:  |   |:  |        |:  1  \|:  1   |   
+ |::.|::.|   |::.|::..   |::.. . |::.| |::.|   |::.|        |::.. . |::.. . |   
+ `---`--- ---`---`----|:.`-------`---' `---'   `---'        `-------`-------'   
+                      `--'                                                      
 
+                .----]] an OPEN-WEBUI companion mod [[----.
+                https://github.com/klyxmaster/main4openwebui
 
-v{VERSION} - building the best open-source AI user interface.
-{f"Commit: {WEBUI_BUILD_HASH}" if WEBUI_BUILD_HASH != "dev-build" else ""}
-https://github.com/open-webui/open-webui
+                    based on the original open-webui
+       v{VERSION} - building the best open-source AI user interface.
+  {f"Commit: {WEBUI_BUILD_HASH}" if WEBUI_BUILD_HASH != "dev-build" else ""}
+                  https://github.com/open-webui/open-webui
 """
 )
 # === Setup ===
@@ -463,7 +468,7 @@ except Exception as e:
     raise RuntimeError(f"❌ Could not load base_dir.txt: {e}")
 
 # Static personality file remains outside the DB
-PERSONALITY_FILE = os.path.join(BASE_DIR, "personality_amicia.txt")
+PERSONALITY_FILE = os.path.join(BASE_DIR, "personality.txt")
 with open(PERSONALITY_FILE, "r", encoding="utf-8") as f:
     personality = f.read().strip()
 
@@ -1101,7 +1106,7 @@ def log_conversation(user_input: str, ai_output: str):
         print(f"⚠️ Failed to log conversation: {e}")
 
 
-def trim(text: str, limit: int = 250) -> str:
+def trim(text: str, limit: int = 500) -> str:
     return text if len(text) <= limit else text[:limit].rstrip() + "..."
     
 def get_recent_convo_for_prompt(count=5):
@@ -1537,7 +1542,7 @@ async def chat_completion(
             print(f"📄 Injected search results: {search_results[:200]}...")
         
         #cant seem to shake the "UINAME:
-        print("🧠 FINAL SYSTEM PROMPT:\n", system_prompt[:500])
+        #print("🧠 FINAL SYSTEM PROMPT:\n", system_prompt[:500])
         form_data["messages"].insert(0, {
             "role": "system",
             "content": system_prompt
