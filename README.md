@@ -100,9 +100,4 @@ Built on the shoulders of [Open WebUI](https://github.com/open-webui/open-webui)
 
 Created with ❤️ for AI companionship, tinkering, and emotional realism.
 
----
-
-Let me know if you'd like a version that runs locally or as a standalone app!
-
-> "Sometimes, the best mods aren’t flashy — they’re the ones that feel like they were always meant to be there."
 
