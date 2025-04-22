@@ -489,15 +489,22 @@ CREATE TABLE IF NOT EXISTS user_memory (
 
 CREATE TABLE IF NOT EXISTS people (
     name TEXT PRIMARY KEY,
-    info TEXT
+    relationship TEXT,
+    gender TEXT,
+    age TEXT,
+    traits TEXT,      -- comma-separated or JSON string
+    notes TEXT        -- long-form memories or observations
 );
+
 
 CREATE TABLE IF NOT EXISTS convo_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user TEXT,
     ai TEXT,
-    timestamp TEXT
+    timestamp TEXT DEFAULT (datetime('now', 'localtime'))
 );
+
+
 
 CREATE TABLE IF NOT EXISTS ai_memory (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -521,6 +528,44 @@ def remember_user_like(item: str):
 def remember_user_dislike(item: str):
     cursor.execute("INSERT OR IGNORE INTO user_memory (category, type, value) VALUES (?, ?, ?)", ("general", "dislike", item.strip()))
     conn.commit()
+    
+def remember_person_detailed(name, relationship=None, gender=None, age=None, traits=None, notes=None):
+    cursor.execute("SELECT name FROM people WHERE name = ?", (name,))
+    if cursor.fetchone():
+        cursor.execute("""
+            UPDATE people SET
+                relationship = COALESCE(?, relationship),
+                gender = COALESCE(?, gender),
+                age = COALESCE(?, age),
+                traits = COALESCE(?, traits),
+                notes = COALESCE(?, notes)
+            WHERE name = ?
+        """, (relationship, gender, age, traits, notes, name))
+    else:
+        cursor.execute("""
+            INSERT INTO people (name, relationship, gender, age, traits, notes)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (name, relationship, gender, age, traits, notes))
+    conn.commit()
+
+def recall_person_summary(name):
+    cursor.execute("SELECT relationship, gender, age, traits, notes FROM people WHERE name = ?", (name,))
+    result = cursor.fetchone()
+    if result:
+        relationship, gender, age, traits, notes = result
+        summary = f"{name} is your {relationship or 'acquaintance'}."
+        if age:
+            summary += f" They are {age} years old."
+        if gender:
+            summary += f" Gender: {gender}."
+        if traits:
+            summary += f" Traits: {traits}."
+        if notes:
+            summary += f" Notes: {notes}"
+        return summary
+    else:
+        return f"No information found for {name}."
+    
 
 def get_user_memory_summary():
     try:
@@ -567,14 +612,6 @@ def get_ai_memory_summary():
         print(f"⚠️ DB error in get_ai_memory_summary: {e}")
         return ""
 
-
-
-def remember_person(name: str, description: str):
-    try:
-        cursor.execute("INSERT OR REPLACE INTO people (name, info) VALUES (?, ?)", (name.strip(), description.strip()))
-        conn.commit()
-    except Exception as e:
-        print(f"⚠️ DB error in remember_person: {e}")
 
 def get_known_people_summary():
     try:
@@ -1052,26 +1089,23 @@ class RedirectMiddleware(BaseHTTPMiddleware):
 app.add_middleware(RedirectMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
-def update_timestamp():
-    now = datetime.now(pytz.timezone("America/Chicago")).strftime("%Y-%m-%d %H:%M:%S")
-    cursor.execute("INSERT OR REPLACE INTO last_seen (id, timestamp) VALUES (1, ?)", (now,))
-    conn.commit()
+def get_last_convo_timestamp():
+    cursor.execute("SELECT timestamp FROM convo_log ORDER BY id DESC LIMIT 1")
+    row = cursor.fetchone()
+    if row and row[0]:
+        return row[0]
+        return None
 
-        
-def get_time_since_last_visit(threshold_hours=3):
+      
+def get_time_since_last_visit(threshold_hours=4):
     try:
-        cursor.execute("SELECT timestamp FROM last_seen WHERE id = 1")
-        row = cursor.fetchone()
-        if not row:
+        last_seen = get_last_convo_timestamp()
+        if not last_seen:
             return ""
 
-        # Parse as naive and localize it to the correct timezone
-        tz = pytz.timezone("America/Chicago")
-        last_seen = tz.localize(datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S"))
-
-        # Now get current time with the same timezone
-        now = datetime.now(tz)
-        diff = now - last_seen
+        last_dt = datetime.strptime(last_seen, "%Y-%m-%d %H:%M:%S")
+        now = datetime.now(pytz.timezone("America/Chicago"))
+        diff = now - last_dt
 
         minutes = int(diff.total_seconds() // 60)
         hours = minutes // 60
@@ -1081,11 +1115,9 @@ def get_time_since_last_visit(threshold_hours=3):
                 return f"It’s been {hours // 24} day(s) and {hours % 24} hour(s) since your last visit."
             else:
                 return f"It’s been {hours} hour(s) and {minutes % 60} minutes since your last visit."
-        else:
-            return ""
-
+        return ""
     except Exception as e:
-        print(f"⚠️ Error reading last_seen: {e}")
+        print(f"⚠️ Timestamp error: {e}")
         return ""
 
 
@@ -1095,15 +1127,13 @@ def get_today_date():
     now = datetime.now(pytz.timezone("America/Chicago"))  # Change timezone if needed
     return now.strftime("Today is %A, %B %d, %Y. The time is %I:%M %p.")
 
-def log_conversation(user_input: str, ai_output: str):
-    try:
-        cursor.execute(
-            "INSERT INTO convo_log (user, ai, timestamp) VALUES (?, ?, ?)",
-            (user_input.strip(), ai_output.strip(), datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        )
-        conn.commit()
-    except Exception as e:
-        print(f"⚠️ Failed to log conversation: {e}")
+def log_conversation(user_input, ai_response):
+    cursor.execute("""
+        INSERT INTO convo_log (user, ai, timestamp)
+        VALUES (?, ?, datetime('now', 'localtime'))
+    """, (user_input.strip(), ai_response.strip()))
+    conn.commit()
+
 
 
 def trim(text: str, limit: int = 500) -> str:
@@ -1451,6 +1481,23 @@ async def chat_completion(
 
         lower_input = user_input.lower()
         lower_input = user_input.lower().replace("’", "'")
+        
+        # === Auto Person Detection ===
+        import re
+        match = re.search(r"\bmy (wife|husband|friend|cat|dog)\s+([A-Z][a-z]+)", user_input)
+        if match:
+            relationship, name = match.groups()
+            print(f"🧠 Auto-remembering person: {name} as {relationship}")
+            remember_person_detailed(name=name, relationship=relationship)
+
+        match2 = re.search(r"\b([A-Z][a-z]+)\s+is\s+my\s+(wife|husband|friend|cat|dog)", user_input)
+        if match2:
+            name, relationship = match2.groups()
+            print(f"🧠 Auto-remembering person: {name} as {relationship}")
+            remember_person_detailed(name=name, relationship=relationship)
+
+        
+        
 
         if "i like" in lower_input:
             item = user_input.split("i like", 1)[-1].strip().rstrip(".")
@@ -1470,31 +1517,52 @@ async def chat_completion(
                 print(f"💾 Saving user dislike: {item}")
                 remember_user_dislike(item)
             
-        # === Amicia Learning Logic ===
+
+        # === Amicia Learning Logic — Enhanced for Pets & People ===
+        import re
+
         if "remember" in lower_input and "person" in lower_input:
-            # Format: "Remember person Loki — he's my cat."
             item = user_input.split("remember", 1)[-1].strip()
 
             if "—" in item:
-                name, description = [s.strip() for s in item.split("—", 1)]
+                name, notes = [s.strip() for s in item.split("—", 1)]
             elif "-" in item:
-                name, description = [s.strip() for s in item.split("-", 1)]
+                name, notes = [s.strip() for s in item.split("-", 1)]
             else:
-                name, description = item.strip(), "No description provided"
+                name, notes = item.strip(), "No description provided"
 
-            print(f"🧠 Saving person: {name} → {description}")
-            remember_person(name, description)
+            print(f"🧠 Saving person: {name} → {notes}")
+            remember_person_detailed(name=name, notes=notes)
 
         elif "remember" in lower_input and " is " in lower_input:
             try:
                 # Format: "Remember Loki is my cat"
                 parts = user_input.split("remember", 1)[-1].strip().split(" is ", 1)
                 name = parts[0].strip().title()
-                desc = parts[1].strip().rstrip(".")
-                print(f"🧠 Learning person: {name} → {desc}")
-                remember_person(name, desc)
+                desc = parts[1].strip().rstrip(".").lower()
+
+                relationship = None
+                gender = None
+
+                # Detect relationship and optionally gender
+                if "cat" in desc or "dog" in desc or "pet" in desc:
+                    relationship = "pet"
+                elif any(word in desc for word in ["wife", "husband", "sister", "brother", "mother", "father", "friend"]):
+                    relationship = re.search(r"(wife|husband|sister|brother|mother|father|friend)", desc)
+                    if relationship:
+                        relationship = relationship.group(1)
+
+                if "female" in desc or "she" in desc:
+                    gender = "female"
+                elif "male" in desc or "he" in desc:
+                    gender = "male"
+
+                print(f"🧠 Learning: {name} — Relationship: {relationship}, Gender: {gender}, Notes: {desc}")
+                remember_person_detailed(name=name, relationship=relationship, gender=gender, notes=desc)
             except Exception as e:
-                print(f"⚠️ Failed to parse implicit person memory: {e}")
+                print(f"⚠️ Failed to parse implicit memory: {e}")
+
+
 
 
         elif "remember" in lower_input and "event" in lower_input:
