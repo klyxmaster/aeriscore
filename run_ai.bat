@@ -26,6 +26,9 @@ if not exist "personality.txt" (
 
 :: Write base_dir.txt
 echo %AI_HOME%> base_dir.txt
+:: Default AI name on second line
+echo Amicia>> base_dir.txt
+
 echo [INFO] base_dir.txt created/updated.
 
 :: Backup original main.py if not already
@@ -48,9 +51,11 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b
 )
 
-:: Install wikipedia if missing
-echo [INFO] Installing 'wikipedia' (if needed)...
-pip install wikipedia >nul 2>&1
+:: Install required Python packages
+echo [INFO] Installing required Python packages (wikipedia, fastapi, uvicorn)...
+pip install wikipedia fastapi uvicorn >nul 2>&1
+
+echo [INFO] Dependencies checked.
 
 :: Launch WebUI
 echo [START] Running Open WebUI...
@@ -61,9 +66,11 @@ echo [CLEANUP] Restoring original main.py...
 copy /Y "%WEBUI_PATH%\main.py.bak" "%WEBUI_PATH%\main.py" >nul
 echo [DONE] main.py restored.
 
+:: Countdown to close
 for /l %%i in (2,-1,1) do (
     echo Starting in %%i...
     timeout /t 1 >nul
 )
 
 exit
+

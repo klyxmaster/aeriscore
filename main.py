@@ -1472,7 +1472,7 @@ async def chat_completion(
     ai_output = ""
     try:
         # === SYSTEM PROMPT CONSTRUCTION ===
-        recent_context = get_recent_convo_for_prompt(5)
+        recent_context = get_recent_convo_for_prompt(30)
         system_prompt = personality.strip()
         
         # Dynamically remove the AI name prefix (first word followed by ':')
