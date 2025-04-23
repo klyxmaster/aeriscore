@@ -466,6 +466,7 @@ try:
         lines = [line.strip() for line in f if line.strip() and not line.strip().startswith("#")]
         BASE_DIR = lines[0]
         AI_NAME = lines[1] if len(lines) > 1 else "Amicia"
+        USER_NAME = lines[2] if len(lines) > 2 else "you"
 except Exception as e:
     raise RuntimeError(f"❌ Could not load base_dir.txt: {e}")
 
@@ -1500,6 +1501,7 @@ async def chat_completion(
             
         memory_summary = get_user_memory_summary()
         system_prompt += f"\n\n{AI_NAME} has a quiet awareness of the user’s preferences, which she may gently reflect in conversation.\n{memory_summary}"
+        system_prompt += f"\nNote: The user's name is {USER_NAME}. Use it when it makes replies feel more personal, but do not overuse it."
         system_prompt += "\nNote: Do not list all stored memories unless asked. Speak naturally, as if recalling something gently."
         
             
