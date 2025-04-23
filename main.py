@@ -460,12 +460,15 @@ import sqlite3
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Load base directory path
+# Load BASE_DIR and AI_NAME from base_dir.txt (ignoring comments and blanks)
 try:
     with open(os.path.join(SCRIPT_DIR, "base_dir.txt"), "r", encoding="utf-8") as f:
-        BASE_DIR = f.read().strip()
+        lines = [line.strip() for line in f if line.strip() and not line.strip().startswith("#")]
+        BASE_DIR = lines[0]
+        AI_NAME = lines[1] if len(lines) > 1 else "Amicia"
 except Exception as e:
     raise RuntimeError(f"❌ Could not load base_dir.txt: {e}")
+
 
 # Static personality file remains outside the DB
 PERSONALITY_FILE = os.path.join(BASE_DIR, "personality.txt")
@@ -623,7 +626,7 @@ def get_ai_memory_summary():
 
         summary = []
         if likes:
-            summary.append(f"Amicia enjoys things like {', '.join(likes)}.")
+            summary.append(f"{AI_NAME} enjoys things like {', '.join(likes)}.")
         if dislikes:
             summary.append(f"She dislikes topics like {', '.join(dislikes)}.")
         return " ".join(summary)
@@ -1486,7 +1489,7 @@ async def chat_completion(
             system_prompt += f"\n\n(NOTE: {time_message})"
             
         if "day" in time_message or "hour" in time_message:
-            system_prompt += "\n\nAmicia may mention the time apart gently, with warmth and care."
+            system_prompt += "\n\n{AI_NAME} may mention the time apart gently, with warmth and care."
 
 
         
@@ -1496,7 +1499,7 @@ async def chat_completion(
             system_prompt += f"\n\nHere’s what you two have talked about today:\n{recent_context}"
             
         memory_summary = get_user_memory_summary()
-        system_prompt += f"\n\nAmicia has a quiet awareness of the user’s preferences, which she may gently reflect in conversation.\n{memory_summary}"
+        system_prompt += f"\n\n{AI_NAME} has a quiet awareness of the user’s preferences, which she may gently reflect in conversation.\n{memory_summary}"
         system_prompt += "\nNote: Do not list all stored memories unless asked. Speak naturally, as if recalling something gently."
         
             
@@ -1508,7 +1511,14 @@ async def chat_completion(
         tone_tag = detect_tone(user_input)
         print(f"🎭 Detected tone: {tone_tag}")
         if tone_tag != "neutral":
-            system_prompt += f"\n\n(Amicia notices the user's tone feels {tone_tag}. She may adjust her mood or reply accordingly — either by being softer, more playful, or giving space.)"
+            system_prompt += f"\n\n({AI_NAME} notices the user's tone feels {tone_tag}. She may adjust her mood or reply accordingly — either by being softer, more playful, or giving space.)"
+        
+        # Check for short vs long input for natural-length replies
+        word_count = len(user_input.strip().split())
+        if word_count <= 5:
+            system_prompt += "\n\n({AI_NAME} senses this was a quick or casual message. She may reply briefly, like a quick text.)"
+        elif word_count >= 20:
+            system_prompt += "\n\n({AI_NAME} notices the user wrote a lot. She may respond with more detail, care, or reflection.)"
 
         
         # === Memory Trigger: Likes/Dislikes ===
@@ -1551,9 +1561,7 @@ async def chat_completion(
             if item:
                 print(f"💾 Saving user dislike: {item}")
                 remember_user_dislike(item)
-            
-
-        # === Amicia Learning Logic — Enhanced for Pets & People ===
+                # === Amicia Learning Logic — Enhanced for Pets & People ===
         import re
 
         if "remember" in lower_input and "person" in lower_input:
