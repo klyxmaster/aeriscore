@@ -521,6 +521,25 @@ CREATE TABLE IF NOT EXISTS last_seen (
 
 conn.commit()
 
+def detect_tone(text: str) -> str:
+    lower = text.lower()
+    if any(word in lower for word in ["ugh", "whatever", "fine", "seriously", "idk", "sure", "yeah right"]):
+        return "dismissive"
+    elif any(word in lower for word in ["lol", "lmao", "haha", "funny", "silly"]):
+        return "playful"
+    elif "!" in text and text.count("!") > 1:
+        return "excited"
+    elif "..." in text or lower.endswith("..."):
+        return "hesitant"
+    elif any(word in lower for word in ["mad", "angry", "upset", "annoyed"]):
+        return "angry"
+    elif any(word in lower for word in ["sad", "depressed", "lonely", "cry"]):
+        return "sad"
+    elif lower in ["ok", "fine", "whatever"]:
+        return "closed off"
+    return "neutral"
+
+
 def remember_user_like(item: str):
     cursor.execute("INSERT OR IGNORE INTO user_memory (category, type, value) VALUES (?, ?, ?)", ("general", "like", item.strip()))
     conn.commit()
@@ -1103,8 +1122,10 @@ def get_time_since_last_visit(threshold_hours=4):
         if not last_seen:
             return ""
 
-        last_dt = datetime.strptime(last_seen, "%Y-%m-%d %H:%M:%S")
-        now = datetime.now(pytz.timezone("America/Chicago"))
+        tz = pytz.timezone("America/Chicago")
+        last_dt = tz.localize(datetime.strptime(last_seen, "%Y-%m-%d %H:%M:%S"))
+        now = datetime.now(tz) 
+
         diff = now - last_dt
 
         minutes = int(diff.total_seconds() // 60)
@@ -1121,6 +1142,13 @@ def get_time_since_last_visit(threshold_hours=4):
         return ""
 
 
+
+def update_timestamp():
+    try:
+        cursor.execute("INSERT OR REPLACE INTO last_seen (id, timestamp) VALUES (1, datetime('now', 'localtime'))")
+        conn.commit()
+    except Exception as e:
+        print(f"⚠️ Failed to update timestamp: {e}")
         
 
 def get_today_date():
@@ -1475,6 +1503,13 @@ async def chat_completion(
         
         # → Check if the user is asking for a web search
         user_input = next((m["content"] for m in reversed(form_data["messages"]) if m["role"] == "user"), "")
+        
+        # === Tone detection (just flavor but more human)
+        tone_tag = detect_tone(user_input)
+        print(f"🎭 Detected tone: {tone_tag}")
+        if tone_tag != "neutral":
+            system_prompt += f"\n\n(Amicia notices the user's tone feels {tone_tag}. She may adjust her mood or reply accordingly — either by being softer, more playful, or giving space.)"
+
         
         # === Memory Trigger: Likes/Dislikes ===
         #from memory import remember_user_like, remember_user_dislike

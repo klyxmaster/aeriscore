@@ -61,4 +61,9 @@ echo [CLEANUP] Restoring original main.py...
 copy /Y "%WEBUI_PATH%\main.py.bak" "%WEBUI_PATH%\main.py" >nul
 echo [DONE] main.py restored.
 
-pause
+for /l %%i in (2,-1,1) do (
+    echo Starting in %%i...
+    timeout /t 1 >nul
+)
+
+exit
