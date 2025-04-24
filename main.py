@@ -1531,47 +1531,38 @@ async def chat_completion(
         
         # === Auto Person Detection ===
         import re
-       match = re.search(r"(?:remember\s+)?([A-Z][a-z]+)\s+is\s+my\s+(wife|husband|neighbor|co-worker|boss|manager|friend|cat|landlord|dog)(.*)", user_input)
+        match = re.search(
+            r"(?:remember\s+)?(?:my\s+)?(?P<relationship>wife|husband|friend|sister|brother|boss|manager|neighbor|doctor|cat|dog|coworker|co-worker|tenant)[\s,:]+(?P<name>[A-Z][a-z]+(?:\s[A-Z][a-z]+)*)(?:[\s,:-]+(?P<details>.*))?",
+            user_input,
+        )
+
         if match:
-            name = match.group(1).strip().title()
-            relationship = match.group(2).strip()
-            remainder = match.group(3).strip()
+            relationship = match.group("relationship").strip().lower()
+            name = match.group("name").strip().title()
+            remainder = match.group("details") or ""
 
-            age = ""
-            gender = ""
-            notes = ""
-
-            # Try to detect age
-            age_match = re.search(r"(\d{2,3})\s*(years old|yo)?", remainder)
-            if age_match:
-                age = age_match.group(1)
-
-            # Try to detect gender
-            if "female" in remainder or "woman" in remainder:
-                gender = "female"
-            elif "male" in remainder or "man" in remainder:
-                gender = "male"
-
-            # Remaining notes
-            notes = remainder.replace(age, "").replace("female", "").replace("male", "").strip(",. ")
-            
-            # Simple trait detection (expand list as needed)
-            trait_list = ["kind", "patient", "brave", "funny", "loyal", "creative", "curious"]
+            gender = age = notes = ""
             traits = []
+            trait_list = ["kind", "patient", "brave", "funny", "loyal", "creative", "curious"]
 
-            for word in remainder.split():
-                clean_word = word.strip(",. ").lower()
-                if clean_word in trait_list:
-                    traits.append(clean_word)
+            # Split details (age, gender, notes, traits)
+            for item in remainder.split(","):                
+                item = item.strip(" —,.").lower()
+                if item in ["male", "female"]:
+                    gender = item
+                elif re.match(r"^\d{2,3}$", item):
+                    age = item
+                elif item in trait_list:
+                    traits.append(item)
+                else:
+                    notes += item + ". "
 
             trait_str = ", ".join(traits)
+            notes = notes.strip()
 
+            print(f"🧠 Parsed person: {name}, {relationship}, {gender}, {age}, {trait_str}, {notes}")
+            remember_person_detailed(name=name, relationship=relationship, gender=gender, age=age, traits=trait_str, notes=notes)
 
-            print(f"🧠 Auto-remembering person: {name}, relationship: {relationship}, age: {age}, gender: {gender}, notes: {notes}")
-            remember_person_detailed(name=name, relationship=relationship, age=age, gender=gender, notes=notes)
-
-
-        
         
 
         if "i like" in lower_input:
