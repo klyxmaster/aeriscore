@@ -6,71 +6,81 @@ setlocal enabledelayedexpansion
 
 :: === 1. Ask for VENV folder name ===
 set /p VENV_NAME=Enter the name of your Python environment folder (e.g., myAI): 
-set VENV_PATH=%~dp0..\%VENV_NAME%
 
-:: === 2. Set WebUI path (relative to venv)
+:: Resolve full venv path
+pushd "%~dp0.."
+set VENV_PATH=%CD%\%VENV_NAME%
+popd
+
+:: Set WebUI path (where main.py is)
 set WEBUI_PATH=%VENV_PATH%\Lib\site-packages\open_webui
+set AI_HOME=%~dp0
 
-cd /d "%~dp0"
-set "AI_HOME=%CD%"
-
-echo.
-echo [SETUP] Checking for required files...
-
-:: Check for personality.txt
-if not exist "personality.txt" (
+:: Check for required files
+if not exist "%AI_HOME%\personality.txt" (
     echo [ERROR] personality.txt is missing. Please place it in this folder.
     pause
     exit /b
 )
 
-:: Write base_dir.txt
-echo %AI_HOME%> base_dir.txt
-:: Default AI name on second line
-echo Amicia>> base_dir.txt
+:: Create base_dir.txt only if missing
+if not exist "%AI_HOME%\base_dir.txt" (
+    echo %AI_HOME%> "%AI_HOME%\base_dir.txt"
+    echo Amicia>> "%AI_HOME%\base_dir.txt"
+    echo You>> "%AI_HOME%\base_dir.txt"
+    echo [INFO] base_dir.txt created with default values.
+) else (
+    echo [INFO] base_dir.txt already exists. Not overwriting.
+)
 
-echo [INFO] base_dir.txt created/updated.
-
-:: Backup original main.py if not already
+:: Backup original main.py if needed
 if not exist "%WEBUI_PATH%\main.py.bak" (
-    copy /Y "%WEBUI_PATH%\main.py" "%WEBUI_PATH%\main.py.bak" >nul
+    copy /Y "%WEBUI_PATH%\main.py" "%WEBUI_PATH%\main.py.bak"
     echo [INFO] Original main.py backed up.
 )
 
-:: Inject your custom main.py
-copy /Y "%AI_HOME%\main.py" "%WEBUI_PATH%\main.py" >nul
-echo [OK] Custom main.py injected.
-
-:: Activate virtual environment
-echo.
-echo [ACTION] Activating virtual environment...
-call "%VENV_PATH%\Scripts\activate.bat"
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Could not activate virtual environment: %VENV_PATH%
+:: Ensure WEBUI_PATH exists
+if not exist "%WEBUI_PATH%" (
+    echo [ERROR] WEBUI_PATH folder doesn't exist. Aborting.
     pause
     exit /b
 )
 
-:: Install required Python packages
-echo [INFO] Installing required Python packages (wikipedia, fastapi, uvicorn)...
-pip install wikipedia fastapi uvicorn >nul 2>&1
+:: Copy custom main.py
+copy /Y "%AI_HOME%\main.py" "%WEBUI_PATH%\main.py"
+if errorlevel 1 (
+    echo [ERROR] Failed to copy main.py. Check paths.
+    pause
+    exit /b
+)
+echo [OK] Custom main.py injected.
 
+:: Activate virtual environment
+call "%VENV_PATH%\Scripts\activate.bat"
+if errorlevel 1 (
+    echo [ERROR] Failed to activate virtual environment.
+    pause
+    exit /b
+)
+
+:: Install Python dependencies
+echo [INFO] Installing required Python packages...
+pip install wikipedia fastapi uvicorn >nul 2>&1
 echo [INFO] Dependencies checked.
 
-:: Launch WebUI
+:: Launch Open WebUI
 echo [START] Running Open WebUI...
 start /wait open-webui serve
 
 :: Restore original main.py
 echo [CLEANUP] Restoring original main.py...
-copy /Y "%WEBUI_PATH%\main.py.bak" "%WEBUI_PATH%\main.py" >nul
+copy /Y "%WEBUI_PATH%\main.py.bak" "%WEBUI_PATH%\main.py"
 echo [DONE] main.py restored.
 
-:: Countdown to close
-for /l %%i in (2,-1,1) do (
-    echo Starting in %%i...
+:: Countdown before exit
+for /l %%i in (3,-1,1) do (
+    echo Exiting in %%i...
     timeout /t 1 >nul
 )
 
 exit
-
