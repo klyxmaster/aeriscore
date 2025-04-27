@@ -22,8 +22,12 @@ iNiQUiTY SETUP
 		a few requirements including the latest open-webui for browser
 		interface with your AI companion.
 		
-		IT IS NOT FROZE. First time can take up to 10min or longer depending
+		IT IS NOT FROZE! First time can take up to 10min - 20min or longer depending
 		on system. Future runs are quicker.
+		
+** WARNING **
+If you do not wee the AERISCORE logo (instead of OPEN-WEBUI) the mod did not 
+get injected, and I am aware of it. Keep checking back.!!
 		
 		
 		
