@@ -3,3 +3,4 @@ EDIT THIS MAIN-PY.txt
 __pycache__/
 ai_memory.db
 personality.txt
+info.cfg
