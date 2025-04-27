@@ -2,7 +2,7 @@
 """
 Enhanced main.py for Open WebUI
 Author: Richard Scorpio (klyxmaster)
-GitHub: https://github.com/klyxmaster/main4openwebui
+GitHub: https://github.com/klyxmaster/AerisCore
 
 Based on: Open WebUI - https://github.com/open-webui/open-webui
 Original Author: Timothy Jaeryang Baek
