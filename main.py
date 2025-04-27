@@ -462,13 +462,13 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Load BASE_DIR and AI_NAME from base_dir.txt (ignoring comments and blanks)
 try:
-    with open(os.path.join(SCRIPT_DIR, "base_dir.txt"), "r", encoding="utf-8") as f:
+    with open(os.path.join(SCRIPT_DIR, "info.cfg"), "r", encoding="utf-8") as f:
         lines = [line.strip() for line in f if line.strip() and not line.strip().startswith("#")]
         BASE_DIR = lines[0]
         AI_NAME = lines[1] if len(lines) > 1 else "Amicia"
         USER_NAME = lines[2] if len(lines) > 2 else "you"
 except Exception as e:
-    raise RuntimeError(f"❌ Could not load base_dir.txt: {e}")
+    raise RuntimeError(f"❌ Could not load info.cfg: {e}")
 
 
 # Static personality file remains outside the DB
