@@ -1,0 +1,30 @@
+CORE SETUP
+===========
+1. Install Python 3.11
+	a. Add in system path.	 
+2. Install Ollama and a Model of choice
+
+iNiQUiTY SETUP
+===============
+1. Create a subfolder called "DATA" and extract iniquity here
+	a. c:\myCoolAI\data
+	b. Not requried however will make setup eaiser to follow.
+2. Rename "personality.txt.dist" -> "personality.txt"
+	a. Edit to your liking.
+	b. for ideas visit https://characterhub.org
+3. Rename "info.cfg.dist" -> "info.cfg"	
+	line #1: path to this folder
+	line #2: companion name
+	line #3: your name.
+	
+4. ai_run.bat
+	a. This will take awhile the first run as it will install quite
+		a few requirements including the latest open-webui for browser
+		interface with your AI companion.
+		
+		IT IS NOT FROZE. First time can take up to 10min or longer depending
+		on system. Future runs are quicker.
+		
+		
+		
+	
