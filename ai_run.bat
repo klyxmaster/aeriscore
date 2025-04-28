@@ -43,13 +43,13 @@ echo [COPY] Updating info.cfg and main.py...
 echo [BACKUP] Saving original main.py...
 copy /Y "%WEBUI_PATH%\main.py" "%WEBUI_PATH%\main.py.bak" >nul
 
-echo [DEBUG] copying "%AI_HOME%\info.cfg" to "%WEBUI_PATH%\info.cfg"
-copy /Y info.cfg "%WEBUI_PATH%\info.cfg"
-echo [DEBUG] copying "%AI_HOME%\main.py" to "%WEBUI_PATH%\main.py"
-copy /Y main.py "%WEBUI_PATH%\main.py"
+echo [INFO] Updating info.cfg
+copy /Y info.cfg "%WEBUI_PATH%\info.cfg" > nul
+echo [INFO] Injecting Aeris-Core
+copy /Y main.py "%WEBUI_PATH%\main.py" > nul
 echo.
 :: --- Launch WebUI ---
-echo [START] Launching Open-WebUI...
+echo [START] Launching Aeris-Core powered by Open-WebUI...
 start /wait open-webui serve
 
 :: --- Restore original main.py ---
