@@ -63,7 +63,9 @@ Make sure you edit this file first: instructions in file
 
 ---
 
-### Step 2: Run the Setup Bat
+### Step 2: Start AI
+- Just use ai_run.bat to start up.
+- Enjoy conversatons
 
 
 ---
