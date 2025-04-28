@@ -1,5 +1,5 @@
-# INIQUITY - 25
-## Drop-In `main.py` for Open WebUI
+# AERIS 
+## Advance companion mod for Open WebUI
 **Adds persistent memory, time awareness, personality, and natural conversation flow**
 
 ---
@@ -50,40 +50,34 @@ This is my solution. If you feel the same way, you're welcome to use it.
 ### Step 1: Create Your AI Folder
 Create a folder anywhere on your PC. Example:
 ```
-C:\AI_Companion\data
+C:\AI_Companion
 ```
 
-Put the Iniquity-25 contents here. It should include:
+Put the Aeris-Core contents here. It should include:
 - `main.py` ← The Iniquity-25 mod
 - `personality.txt` ← (REQUIRED) Write your AI's personality or backstory
 - `run_ai.bat` ← Launcher that does everything for you
+- `info.cfg` ← EDIT THIS FIRST 
 
-### Step 1.a: Edit RUN_AI.BAT (REQUIRED!)
-Make sure you edit this file first:
+### Step 1.a: Edit INFO.CFG (REQUIRED!)
+Make sure you edit this file first: instructions in file
 - **Line 1**: The absolute path to this folder
-- **Line 2**: The name of your AI (defaults to "Amicia")
+- **Line 2**: path to your open-webui folder
+- **Line 3**: Your companion name - should match personality.txt
+- **Line 4**: Your name
 
 ---
 
 ### Step 2: Run the Setup Bat
-Double-click `run_ai.bat`. It will:
-1. Ask for your virtual environment name (like `myAI`)
-2. Automatically:
-   - Backup Open WebUI's original `main.py`
-   - Replace it with this mod
-   - Set up `base_dir.txt` with path + AI name
-   - Install missing packages (like `wikipedia`)
-   - Launch Open WebUI
-   - Restore the original file after exit
+
 
 ---
 
 ## ✅ First-Time Checklist
 - [ ] Python 3.11 installed
-- [ ] Virtual environment created and activated
-- [ ] Ollama running with at least one model
-- [ ] Open WebUI installed and accessible
-- [ ] This folder contains main.py, run_ai.bat, and personality.txt
+- [ ] Install ollama and a model of your choice
+- [ ] open-webui installed
+
 
 ---
 
