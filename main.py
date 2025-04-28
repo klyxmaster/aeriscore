@@ -2,7 +2,7 @@
 """
 Enhanced main.py for Open WebUI
 Author: Richard Scorpio (klyxmaster)
-GitHub: https://github.com/klyxmaster/main4openwebui
+GitHub: https://github.com/klyxmaster/aeriscore
 
 Based on: Open WebUI - https://github.com/open-webui/open-webui
 Original Author: Timothy Jaeryang Baek
@@ -440,7 +440,7 @@ print(
     |___|   :/   |___|    |___|   :      :/         :/     |___|       :/   
                                          :          :                       
 
-                .----]] an OPEN-WEBUI companion mod [[----.
+           .----]] AERISCORE: an OPEN-WEBUI companion mod [[----.
                 https://github.com/klyxmaster/main4openwebui
 
                     based on the original open-webui

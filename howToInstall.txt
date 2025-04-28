@@ -3,30 +3,26 @@ CORE SETUP
 1. Install Python 3.11
 	a. Add in system path.	 
 2. Install Ollama and a Model of choice
+3. Install open-webui "pip install open-webui"
 
-iNiQUiTY SETUP
+AERISCORE SETUP
 ===============
-1. Create a subfolder called "DATA" and extract iniquity here
-	a. c:\myCoolAI\data
-	b. Not requried however will make setup eaiser to follow.
+1. Create a subfolder for AERISCORE
+	a. c:\myCoolAI
+
 2. Rename "personality.txt.dist" -> "personality.txt"
 	a. Edit to your liking.
 	b. for ideas visit https://characterhub.org
 3. Rename "info.cfg.dist" -> "info.cfg"	
-	line #1: path to this folder
-	line #2: companion name
-	line #3: your name.
+	line #1: path to this folder (ex. c:\mycoolai)
+	line #2: PATH to your open-webui
+	line #3: Companion Name.
+	line #4: Your Name
 	
 4. ai_run.bat
-	a. This will take awhile the first run as it will install quite
-		a few requirements including the latest open-webui for browser
-		interface with your AI companion.
-		
-		IT IS NOT FROZE! First time can take up to 10min - 20min or longer depending
-		on system. Future runs are quicker.
-		
+5. open browser to localhost:8080 to chat with your AI
 ** WARNING **
-If you do not wee the AERISCORE logo (instead of OPEN-WEBUI) the mod did not 
+If you do not see the AERISCORE logo (instead of OPEN-WEBUI) the mod did not 
 get injected, and I am aware of it. Keep checking back.!!
 		
 		

@@ -1,92 +1,65 @@
 @echo off
 setlocal enabledelayedexpansion
 
-:: === INIQUITY-25 LAUNCHER ===
-:: Smarter version: venv creation, backup/restore, dependency check
+:: === AERISCORE LAUNCHER (BBS-STYLE INFO.CFG) ===
 
-:: --- Ask for environment name ---
-set /p VENV_NAME=Choose your Python venv folder name (e.g., myAI): 
-
-:: --- Calculate initial paths ---
-pushd "%~dp0.."
-set ROOT_DIR=%CD%
-popd
-
-set VENV_PATH=%ROOT_DIR%\%VENV_NAME%
-set AI_HOME=%~dp0
-
-:: --- Check if venv exists, else create ---
-if not exist "%VENV_PATH%\Scripts\activate.bat" (
-    echo [ACTION] Creating virtual environment at %VENV_PATH%...
-    python -m venv "%VENV_PATH%"
-    if errorlevel 1 (
-        echo [ERROR] Failed to create venv. Exiting.
-        pause
-        exit /b
-    )
-)
-
-:: --- Activate venv ---
-call "%VENV_PATH%\Scripts\activate.bat"
-if errorlevel 1 (
-    echo [ERROR] Failed to activate venv. Exiting.
+set "INFO_FILE=info.cfg"
+if not exist "%INFO_FILE%" (
+    echo [ERROR] info.cfg not found. Aborting.
     pause
     exit /b
 )
 
-:: --- Install open-webui if missing ---
-set WEBUI_PATH=%VENV_PATH%\Lib\site-packages\open_webui
-
-if not exist "%WEBUI_PATH%\main.py" (
-    echo [ACTION] Installing Open WebUI package...
-    pip install open-webui
-    if errorlevel 1 (
-        echo [ERROR] Failed to install open-webui. Exiting.
-        pause
-        exit /b
+:: --- Read lines properly ---
+set "count=0"
+for /f "usebackq tokens=* delims=" %%a in ("%INFO_FILE%") do (
+    if not "%%a"=="" if /i not "%%a:~0,1%%"=="#" (
+        set /a count+=1
+        if "!count!"=="1" set "AI_HOME=%%a"
+        if "!count!"=="2" set "WEBUI_PATH=%%a"
+        if "!count!"=="3" set "COMPANION=%%a"
+        if "!count!"=="4" set "USER=%%a"
     )
 )
 
-:: --- Install extra dependencies ---
-set PACKAGES=onnxruntime wikipedia fastapi uvicorn
+:: --- Confirm values ---
+echo [OK] AerisCore Path: %AI_HOME%
+echo [OK] WebUI Path: %WEBUI_PATH%
+echo [OK] Companion: %COMPANION%
+echo [OK] User: %USER%
+echo.
 
-for %%P in (%PACKAGES%) do (
-    echo [CHECK] Installing %%P...
-    pip install --prefer-binary %%P >nul 2>&1
+
+
+:: --- Verify main.py exists ---
+if not exist "%WEBUI_PATH%\main.py" (
+    echo [ERROR] WebUI main.py not found at: %WEBUI_PATH%
+    pause
+    exit /b
 )
 
-:: --- info.cfg setup ---
-if not exist "%AI_HOME%\info.cfg" (
-    (
-        echo %AI_HOME%
-        echo Amicia
-        echo You
-    ) > "%AI_HOME%\info.cfg"
-)
+:: --- Backup and Inject Custom Files ---
+echo [COPY] Updating info.cfg and main.py...
+echo [BACKUP] Saving original main.py...
+copy /Y "%WEBUI_PATH%\main.py" "%WEBUI_PATH%\main.py.bak" >nul
 
-:: --- Inject custom main.py ---
-if not exist "%WEBUI_PATH%\main.py.bak" (
-    echo [BACKUP] Backing up original main.py...
-    copy /Y "%WEBUI_PATH%\main.py" "%WEBUI_PATH%\main.py.bak"
-)
-
-echo [COPY] Updating info.cfg...
-copy /Y "%AI_HOME%\info.cfg" "%WEBUI_PATH%\info.cfg"
-echo [COPY] Injecting custom main.py...
-copy /Y "%AI_HOME%\main.py" "%WEBUI_PATH%\main.py"
-
-:: --- Start WebUI ---
-echo [START] Launching Open WebUI...
+echo [DEBUG] copying "%AI_HOME%\info.cfg" to "%WEBUI_PATH%\info.cfg"
+copy /Y info.cfg "%WEBUI_PATH%\info.cfg"
+echo [DEBUG] copying "%AI_HOME%\main.py" to "%WEBUI_PATH%\main.py"
+copy /Y main.py "%WEBUI_PATH%\main.py"
+echo.
+:: --- Launch WebUI ---
+echo [START] Launching Open-WebUI...
 start /wait open-webui serve
-::open-webui serve
-::pause
 
-:: --- Restore original main.py after exit ---
+:: --- Restore original main.py ---
 echo [RESTORE] Restoring original main.py...
-copy /Y "%WEBUI_PATH%\main.py.bak" "%WEBUI_PATH%\main.py"
+copy /Y "%WEBUI_PATH%\main.py.bak" "%WEBUI_PATH%\main.py" >nul
 
-:: --- Final exit countdown ---
-for /l %%i in (3,-1,1) do (
+echo [DONE] Main.py restored.
+
+:: --- Exit nicely ---
+for /l %%i in (5,-1,1) do (
     echo Exiting in %%i seconds...
     timeout /t 1 >nul
 )
