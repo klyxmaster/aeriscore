@@ -18,11 +18,6 @@ It’s designed to run from your **own folder** without modifying Open WebUI per
 
 ## 📂 Requirements
 - Python 3.11 (or higher)
-- Create a virtual environment:
-  ```
-  python -m venv yourenvname
-  ```
-- Activate your virtual environment before running setup
 - [Ollama](https://ollama.com) installed and running
 - At least one compatible model downloaded (see below)
 - Open WebUI installed and working
