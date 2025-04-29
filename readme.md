@@ -122,6 +122,13 @@ All memory, preferences, and AI behavior files live inside your chosen folder. T
 
 ---
 
+## 🛠 How to use manually
+There are only 2 main files that need to be copied to webui
+- Backup the main.py found in the open-webui main folder
+- copy the Aeris-Core main.py to the open-webui
+- copy info.cfg file to the open-webui This should have the required paths in the top to lines
+- That is it.
+
 ## 📂 Files in This Repo
 - `main.py` — Drop-in replacement for WebUI backend
 - `run_ai.bat` — Automates setup and restoration
